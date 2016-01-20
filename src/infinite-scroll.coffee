@@ -10,7 +10,8 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$interval', 'THROTTLE
     infiniteScrollDistance: '='
     infiniteScrollDisabled: '='
     infiniteScrollUseDocumentBottom: '=',
-    infiniteScrollListenForEvent: '@'
+    infiniteScrollListenForEvent: '@',
+    infiniteScrollUseReverseScroll: '='
 
   link: (scope, elem, attrs) ->
     windowElement = angular.element($window)
@@ -22,7 +23,7 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$interval', 'THROTTLE
     immediateCheck = true
     useDocumentBottom = false
     unregisterEventListener = null
-    checkInterval = false
+    useReverseScroll = false
 
     height = (elem) ->
       elem = elem[0] or elem
@@ -61,18 +62,27 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$interval', 'THROTTLE
         elementBottom = height((elem[0].ownerDocument || elem[0].document).documentElement)
 
       remaining = elementBottom - containerBottom
-      shouldScroll = remaining <= height(container) * scrollDistance + 1
+      shouldScrollDown = remaining <= height(container) * scrollDistance + 1
+      shouldScrollUp = container.scrollTop() == 0
 
-      if shouldScroll
+      if shouldScrollDown
         checkWhenEnabled = true
 
         if scrollEnabled
+          dirObject = { "direction" : "down" }
           if scope.$$phase || $rootScope.$$phase
-            scope.infiniteScroll()
+            scope.infiniteScroll(dirObject)
           else
-            scope.$apply(scope.infiniteScroll)
+            scope.$apply(scope.infiniteScroll(dirObject))
+
+      else if useReverseScroll && shouldScrollUp
+          dirObject = { "direction" : "up" }
+          if scope.$$phase || $rootScope.$$phase
+            scope.infiniteScroll(dirObject)
+          else
+            scope.$apply(scope.infiniteScroll(dirObject))
+
       else
-        if checkInterval then $interval.cancel checkInterval
         checkWhenEnabled = false
 
     # The optional THROTTLE_MILLISECONDS configuration value specifies
@@ -139,6 +149,16 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$interval', 'THROTTLE
     # If I don't explicitly call the handler here, tests fail. Don't know why yet.
     handleInfiniteScrollDisabled scope.infiniteScrollDisabled
 
+    # enable reverse scrolling
+    # when used, the callback specified by infinite-scroll will include a diection
+    # parameter, either 'up' or 'down'
+    handleInfiniteScrollUseReverseScroll = (v) ->
+      useReverseScroll = v
+
+    scope.$watch 'infiniteScrollUseReverseScroll', handleInfiniteScrollUseReverseScroll
+    handleInfiniteScrollUseReverseScroll scope.infiniteScrollUseReverseScroll
+
+
     # use the bottom of the document instead of the element's bottom.
     # This useful when the element does not have a height due to its
     # children being absolute positioned.
@@ -200,8 +220,8 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$interval', 'THROTTLE
     if attrs.infiniteScrollImmediateCheck?
       immediateCheck = scope.$eval(attrs.infiniteScrollImmediateCheck)
 
-    checkInterval = $interval (->
+    $interval (->
       if immediateCheck
         handler()
-    ), 0
+    ), 0, 1
 ]
