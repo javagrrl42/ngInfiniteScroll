@@ -1,4 +1,4 @@
-/* ng-infinite-scroll - v1.2.1 - 2016-01-20 */
+/* ng-infinite-scroll - v1.2.1 - 2016-01-21 */
 var mod;
 
 mod = angular.module('infinite-scroll', []);
@@ -18,7 +18,7 @@ mod.directive('infiniteScroll', [
         infiniteScrollUseReverseScroll: '='
       },
       link: function(scope, elem, attrs) {
-        var changeContainer, checkWhenEnabled, container, handleInfiniteScrollContainer, handleInfiniteScrollDisabled, handleInfiniteScrollDistance, handleInfiniteScrollUseDocumentBottom, handleInfiniteScrollUseReverseScroll, handler, height, immediateCheck, offsetTop, pageYOffset, scrollDistance, scrollEnabled, throttle, unregisterEventListener, useDocumentBottom, useReverseScroll, windowElement;
+        var changeContainer, checkWhenEnabled, container, handleInfiniteScrollContainer, handleInfiniteScrollDisabled, handleInfiniteScrollDistance, handleInfiniteScrollUseDocumentBottom, handleInfiniteScrollUseReverseScroll, handler, hasScrolledDown, height, immediateCheck, offsetTop, pageYOffset, scrollDistance, scrollEnabled, throttle, unregisterEventListener, useDocumentBottom, useReverseScroll, windowElement;
         windowElement = angular.element($window);
         scrollDistance = null;
         scrollEnabled = null;
@@ -28,6 +28,7 @@ mod.directive('infiniteScroll', [
         useDocumentBottom = false;
         unregisterEventListener = null;
         useReverseScroll = false;
+        hasScrolledDown = false;
         height = function(elem) {
           elem = elem[0] || elem;
           if (isNaN(elem.offsetHeight)) {
@@ -67,8 +68,11 @@ mod.directive('infiniteScroll', [
             elementBottom = height((elem[0].ownerDocument || elem[0].document).documentElement);
           }
           remaining = elementBottom - containerBottom;
+          if (hasScrolledDown !== true) {
+            hasScrolledDown = container.scrollTop() > 0;
+          }
           shouldScrollDown = remaining <= height(container) * scrollDistance + 1;
-          shouldScrollUp = container.scrollTop() === 0;
+          shouldScrollUp = container.scrollTop() === 0 && hasScrolledDown;
           if (shouldScrollDown) {
             checkWhenEnabled = true;
             if (scrollEnabled) {
@@ -82,13 +86,16 @@ mod.directive('infiniteScroll', [
               }
             }
           } else if (useReverseScroll && shouldScrollUp) {
-            dirObject = {
-              "direction": "up"
-            };
-            if (scope.$$phase || $rootScope.$$phase) {
-              return scope.infiniteScroll(dirObject);
-            } else {
-              return scope.$apply(scope.infiniteScroll(dirObject));
+            checkWhenEnabled = true;
+            if (scrollEnabled) {
+              dirObject = {
+                "direction": "up"
+              };
+              if (scope.$$phase || $rootScope.$$phase) {
+                return scope.infiniteScroll(dirObject);
+              } else {
+                return scope.$apply(scope.infiniteScroll(dirObject));
+              }
             }
           } else {
             return checkWhenEnabled = false;

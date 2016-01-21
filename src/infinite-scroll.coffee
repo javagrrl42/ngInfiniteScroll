@@ -24,6 +24,7 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$interval', 'THROTTLE
     useDocumentBottom = false
     unregisterEventListener = null
     useReverseScroll = false
+    hasScrolledDown = false
 
     height = (elem) ->
       elem = elem[0] or elem
@@ -62,8 +63,12 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$interval', 'THROTTLE
         elementBottom = height((elem[0].ownerDocument || elem[0].document).documentElement)
 
       remaining = elementBottom - containerBottom
+
+      if (hasScrolledDown != true)
+        hasScrolledDown = container.scrollTop() > 0
+
       shouldScrollDown = remaining <= height(container) * scrollDistance + 1
-      shouldScrollUp = container.scrollTop() == 0
+      shouldScrollUp = container.scrollTop() == 0 && hasScrolledDown
 
       if shouldScrollDown
         checkWhenEnabled = true
@@ -76,6 +81,9 @@ mod.directive 'infiniteScroll', ['$rootScope', '$window', '$interval', 'THROTTLE
             scope.$apply(scope.infiniteScroll(dirObject))
 
       else if useReverseScroll && shouldScrollUp
+        checkWhenEnabled = true
+
+        if scrollEnabled
           dirObject = { "direction" : "up" }
           if scope.$$phase || $rootScope.$$phase
             scope.infiniteScroll(dirObject)
